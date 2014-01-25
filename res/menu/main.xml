@@ -1,0 +1,12 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android" >
+
+    <item
+        android:id="@+id/action_back"
+        android:icon="@drawable/back"
+        android:showAsAction="always"
+        android:title="@string/action_back"/>
+    <item android:id="@+id/action_removefile"
+        android:icon="@drawable/trash"
+        android:title="@string/trash"
+        android:showAsAction="never"/>
+</menu>

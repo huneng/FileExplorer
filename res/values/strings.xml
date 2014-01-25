@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">My File</string>
+    <string name="action_settings">Settings</string>
+    <string name="hello_world">Hello world!</string>
+    <string name="file_image">File Image</string>
+    <string name="front_dir">Forward</string>
+    <string name="action_back">Back</string>
+    <string name="trash">Trash</string>
+</resources>
