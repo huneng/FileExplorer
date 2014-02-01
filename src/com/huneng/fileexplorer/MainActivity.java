@@ -15,22 +15,30 @@ import android.widget.CheckBox;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.AdapterView.OnItemLongClickListener;
 import android.widget.ListView;
+import android.widget.Toast;
 
 public class MainActivity extends Activity {
-
 	MyAdapter m_Adapter;
 	ListView m_ListView;
+
 	Menu m_OptionMenu;
+
 	MenuItem m_RemoveItem;
 	MenuItem m_BackItem;
+	MenuItem m_CancelItem;
+	MenuItem m_OkItem;
+	MenuItem m_MoveItem;
+
+	List<String> m_RenameList;
+
 	public static int m_xd, m_yd;
-	
+
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 
-		FileUtil.setCurPath(GlobalVariable.ROOT_PATH);
-		
+		FileUtil.setCurPath(MToolBox.getSdcardPath());
+
 		setContentView(R.layout.activity_main);
 
 		ListView m_ListView = (ListView) findViewById(R.id.lv_FileList);
@@ -42,8 +50,9 @@ public class MainActivity extends Activity {
 		m_ListView.setAdapter(m_Adapter);
 
 		m_ListView.setOnItemClickListener(new MyOnItemClickListener(this));
-		m_ListView.setOnItemLongClickListener(new MyOnItemLongClickListener(this));
-		
+		m_ListView.setOnItemLongClickListener(new MyOnItemLongClickListener(
+				this));
+
 		DisplayMetrics l_Metrics = new DisplayMetrics();
 		this.getWindowManager().getDefaultDisplay().getMetrics(l_Metrics);
 
@@ -54,7 +63,7 @@ public class MainActivity extends Activity {
 
 	public void updateFileList(String a_DirPath) {
 		boolean l_Rc = FileUtil.setCurPath(a_DirPath);
-		
+
 		if (!l_Rc)
 			return;
 
@@ -63,7 +72,7 @@ public class MainActivity extends Activity {
 		m_Adapter.setFileNames(l_FileList);
 		m_Adapter.notifyDataSetChanged();
 
-		if (FileUtil.getCurPath().equals(GlobalVariable.ROOT_PATH))
+		if (FileUtil.getCurPath().equals(Global.ROOT_PATH))
 			m_BackItem.setEnabled(false);
 		else
 			m_BackItem.setEnabled(true);
@@ -72,18 +81,46 @@ public class MainActivity extends Activity {
 
 	@Override
 	public boolean onKeyDown(int keyCode, KeyEvent event) {
-		if(keyCode == KeyEvent.KEYCODE_BACK){
-			if(m_Adapter.m_ListMode == MyAdapter.ListMode_Edit){
+		if (keyCode == KeyEvent.KEYCODE_BACK) {
+			if (m_Adapter.m_ListMode == MyAdapter.ListMode_Edit) {
 				m_Adapter.setListMode(MyAdapter.ListMode_Default);
 				m_Adapter.notifyDataSetChanged();
+				displayBackAction();
 				return true;
-			}
-			else{
+			} else {
 				return super.onKeyDown(keyCode, event);
 			}
 		}
 		return super.onKeyDown(keyCode, event);
 	}
+
+	public void updateActionBar(int a_back, int a_remove, int a_move,
+			int a_cancel, int a_ok) {
+		m_BackItem.setShowAsAction(a_back);
+		m_RemoveItem.setShowAsAction(a_remove);
+		m_MoveItem.setShowAsAction(a_move);
+		m_CancelItem.setShowAsAction(a_cancel);
+		m_OkItem.setShowAsAction(a_ok);
+	}
+
+	public void displayBackAction() {
+		updateActionBar(MenuItem.SHOW_AS_ACTION_ALWAYS,
+				MenuItem.SHOW_AS_ACTION_NEVER, MenuItem.SHOW_AS_ACTION_NEVER,
+				MenuItem.SHOW_AS_ACTION_NEVER, MenuItem.SHOW_AS_ACTION_NEVER);
+	}
+
+	public void displayEditActions() {
+		updateActionBar(MenuItem.SHOW_AS_ACTION_NEVER,
+				MenuItem.SHOW_AS_ACTION_ALWAYS, MenuItem.SHOW_AS_ACTION_ALWAYS,
+				MenuItem.SHOW_AS_ACTION_NEVER, MenuItem.SHOW_AS_ACTION_NEVER);
+	}
+
+	public void displayJudgeActions() {
+		updateActionBar(MenuItem.SHOW_AS_ACTION_ALWAYS,
+				MenuItem.SHOW_AS_ACTION_NEVER, MenuItem.SHOW_AS_ACTION_NEVER,
+				MenuItem.SHOW_AS_ACTION_ALWAYS, MenuItem.SHOW_AS_ACTION_ALWAYS);
+	}
+
 	@Override
 	public boolean onCreateOptionsMenu(Menu a_Menu) {
 		MenuInflater inflater = getMenuInflater();
@@ -92,9 +129,16 @@ public class MainActivity extends Activity {
 		m_OptionMenu = a_Menu;
 
 		m_BackItem = a_Menu.findItem(R.id.action_back);
-		m_RemoveItem = a_Menu.findItem(R.id.action_removefile);
 
-		m_BackItem.setEnabled(false);
+		m_RemoveItem = a_Menu.findItem(R.id.action_removefile);
+		m_MoveItem = a_Menu.findItem(R.id.action_move);
+
+		m_OkItem = a_Menu.findItem(R.id.action_ok);
+		m_CancelItem = a_Menu.findItem(R.id.action_cancel);
+
+		m_BackItem.setEnabled(FileUtil.getCurPath().equals("/"));
+
+		displayBackAction();
 
 		return super.onCreateOptionsMenu(a_Menu);
 	}
@@ -102,29 +146,54 @@ public class MainActivity extends Activity {
 	@Override
 	public boolean onOptionsItemSelected(MenuItem a_Item) {
 		switch (a_Item.getItemId()) {
+
 		case R.id.action_back:
 			String l_Path = FileUtil.getParentPath();
 			updateFileList(l_Path);
 			break;
+
 		case R.id.action_removefile:
 			List<String> l_List = m_Adapter.getCheckedList();
-			
-			for(int i = 0; i < l_List.size(); i++)
+
+			for (int i = 0; i < l_List.size(); i++)
 				FileUtil.removeFile(l_List.get(i));
-			
-			//m_Adapter.setListMode(MyAdapter.ListMode_Default);
-			
+
+			// m_Adapter.setListMode(MyAdapter.ListMode_Default);
+
 			List<String> l_FileLists = FileUtil.getCurDirFileNames();
-			
+
 			m_Adapter.setFileNames(l_FileLists);
 			m_Adapter.notifyDataSetChanged();
-			
-			m_RemoveItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER);
-			
-			m_BackItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
-			
+
+			displayBackAction();
+
 			break;
 
+		case R.id.action_move:
+			displayJudgeActions();
+			m_RenameList = m_Adapter.getCheckedList();
+			m_Adapter.setListMode(MyAdapter.ListMode_Default);
+			m_Adapter.notifyDataSetChanged();
+			break;
+
+		case R.id.action_ok:
+			if (FileUtil.getCurPath().startsWith(MToolBox.getSdcardPath())) {
+				for (int i = 0; i < m_RenameList.size(); i++) {
+					String l_FilePath = m_RenameList.get(i);
+					String l_FileName = FileUtil.getFileName(l_FilePath);
+					FileUtil.renameFile(l_FilePath, FileUtil.getCurPath() + "/"
+							+ l_FileName);
+
+				}
+			} else {
+				Toast.makeText(this, "Can't operate file here",
+						Toast.LENGTH_LONG).show();
+			}
+		case R.id.action_cancel:
+			displayBackAction();
+			m_Adapter.setFileNames(FileUtil.getCurDirFileNames());
+			m_Adapter.notifyDataSetChanged();
+			break;
 		}
 		return super.onOptionsItemSelected(a_Item);
 	}
@@ -140,14 +209,16 @@ public class MainActivity extends Activity {
 		@Override
 		public void onItemClick(AdapterView<?> a_AdapterView, View a_View,
 				int a_Pos, long a_Id) {
-			
-			String l_DirPath = FileUtil.getSubDictory(m_Parent.m_Adapter
-					.getFileNames().get(a_Pos));
+			String l_FilePath = m_Parent.m_Adapter.getFileNames().get(a_Pos);
+			int l_Type = FileUtil.getFileType(l_FilePath);
 
-			if (l_DirPath == null)
+			if (l_Type == Global.FileType_Dir) {
+				m_Parent.updateFileList(l_FilePath);
+			} else if (l_Type == Global.FileType_Other) {
 				return;
-
-			m_Parent.updateFileList(l_DirPath);
+			} else {
+				FileUtil.openFile(l_FilePath, m_Parent);
+			}
 		}
 
 	}
@@ -163,20 +234,17 @@ public class MainActivity extends Activity {
 		@Override
 		public boolean onItemLongClick(AdapterView<?> a_AdapterView,
 				View a_View, int a_Pos, long a_id) {
-			MenuItem l_RemoveItem = m_Parent.m_RemoveItem;
-			MenuItem l_BackItem = m_Parent.m_BackItem;
 
-			l_RemoveItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
-			l_BackItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER);
-			
-			
-			CheckBox l_CheckBox = (CheckBox)a_View.findViewById(R.id.cb_FileCheck);
+			m_Parent.displayEditActions();
+
+			CheckBox l_CheckBox = (CheckBox) a_View
+					.findViewById(R.id.cb_FileCheck);
 			l_CheckBox.setChecked(true);
-			
+
 			m_Parent.updateFileList(FileUtil.getCurPath());
-			
+
 			m_Parent.m_Adapter.setListMode(MyAdapter.ListMode_Edit);
-			
+
 			return true;
 		}
 

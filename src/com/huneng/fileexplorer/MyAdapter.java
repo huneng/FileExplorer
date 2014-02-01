@@ -18,7 +18,8 @@ public class MyAdapter extends BaseAdapter {
 
 	public static final int ListMode_Edit = 0;
 	public static final int ListMode_Default = 1;
-
+	public static final int ListMode_Open = 2;
+	
 	private List<String> m_sFileNames;
 	private boolean m_CheckArray[];
 	public int m_ListMode;
@@ -72,6 +73,7 @@ public class MyAdapter extends BaseAdapter {
 		m_sFileNames = a_FileNames;
 
 		m_CheckArray = new boolean[m_sFileNames.size()];
+		
 		MToolBox.memset(m_CheckArray, m_CheckArray.length, false);
 	}
 
