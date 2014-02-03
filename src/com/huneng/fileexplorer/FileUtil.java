@@ -248,29 +248,47 @@ public class FileUtil {
 		l_File.renameTo(l_NewFile);
 	}
 
-	public static boolean copyFile(String a_FilePath, ProgressBar a_ProgressBar) {
+	public static boolean copyFile(String a_FilePath, String a_DestPath,
+			ProgressBar a_ProgressBar) {
+		
 		File l_File = new File(a_FilePath);
-		if (l_File.getParent().equals(m_sCurrentPath))
+		if (l_File.getParent().equals(a_DestPath))
 			return false;
 		String l_FileName = l_File.getName();
-		
-		File l_File2 = new File(m_sCurrentPath +"/"+ l_FileName);
+
+		File l_File2 = new File(a_DestPath + "/" + l_FileName);
+
 		long l_FileLen = l_File.length();
-		
+
+		if (l_File.isDirectory()) {
+			File[] l_Files = l_File.listFiles();
+			l_File2.mkdirs();
+			
+			for (int i = 0; i < l_Files.length; i++) {
+				boolean l_Rc = copyFile(l_Files[i].getAbsolutePath(),
+						l_File2.getAbsolutePath(), a_ProgressBar);
+				if (!l_Rc)
+					return false;
+			}
+			return true;
+		}
+		if(l_File2.exists()){
+			return true;
+		}
 		try {
 			FileInputStream fis = new FileInputStream(l_File);
 			FileOutputStream fos = new FileOutputStream(l_File2);
-			
-			byte l_Buffer[] = new byte[1024*1024];
-			
-			l_FileLen = l_FileLen/1024;
-			int max = (int) (l_FileLen/1024);
-			
+
+			byte l_Buffer[] = new byte[1024 * 1024];
+
+			l_FileLen = l_FileLen / 1024;
+			int max = (int) (l_FileLen / 1024);
+
 			a_ProgressBar.setMax(max);
-			
+
 			int len = 0;
 			int count = 0;
-			
+
 			while (len != -1) {
 				count++;
 				len = fis.read(l_Buffer);
@@ -279,7 +297,7 @@ public class FileUtil {
 			}
 			fis.close();
 			fos.close();
-			
+
 		} catch (IOException e) {
 			return false;
 		}

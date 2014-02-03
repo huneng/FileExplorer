@@ -229,7 +229,7 @@ public class MainActivity extends Activity {
 					l_ProgressJobName.setText(l_FileName);
 
 					if (m_EditFlag == EditMode.Copy) {
-						FileUtil.copyFile(m_RenameList.get(i), l_ProgressBar1);
+						FileUtil.copyFile(m_RenameList.get(i), FileUtil.getCurPath(), l_ProgressBar1);
 					} else {
 						FileUtil.renameFile(l_FilePath, FileUtil.getCurPath()
 								+ "/" + l_FileName);
