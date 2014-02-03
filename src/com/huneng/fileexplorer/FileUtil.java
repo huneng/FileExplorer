@@ -1,6 +1,9 @@
 package com.huneng.fileexplorer;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
@@ -8,10 +11,11 @@ import java.util.List;
 import android.app.Dialog;
 import android.content.Context;
 import android.content.Intent;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 
 public class FileUtil {
-	
+
 	private static String m_sCurrentPath = Global.ROOT_PATH;
 
 	public static String getSubDictory(int a_Index) {
@@ -105,7 +109,6 @@ public class FileUtil {
 		return Global.FileType_Other;
 
 	}
-	
 
 	public static void sortByName(List<String> a_FileNames) {
 		Collections.sort(a_FileNames);
@@ -122,8 +125,6 @@ public class FileUtil {
 				Res.add(a_FileNames.get(i));
 		}
 
-		
-		
 		for (int j = 0; j < Global.FileTypes.length; j++) {
 			for (int k = 0; k < Global.FileTypes[j].length; k++) {
 				for (int i = 0; i < a_FileNames.size(); i++) {
@@ -132,14 +133,14 @@ public class FileUtil {
 				}
 			}
 		}
-		
-		for(int i = 0; i < a_FileNames.size(); i++){
-			if(getFileType(a_FileNames.get(i)) == Global.FileType_Other)
+
+		for (int i = 0; i < a_FileNames.size(); i++) {
+			if (getFileType(a_FileNames.get(i)) == Global.FileType_Other)
 				Res.add(a_FileNames.get(i));
 		}
-		
+
 		a_FileNames.clear();
-		
+
 		for (int i = 0; i < Res.size(); i++)
 			a_FileNames.add(Res.get(i));
 	}
@@ -241,9 +242,47 @@ public class FileUtil {
 		return -1;
 	}
 
-	public static void renameFile(String a_FileName, String a_NewName){
+	public static void renameFile(String a_FileName, String a_NewName) {
 		File l_File = new File(a_FileName);
 		File l_NewFile = new File(a_NewName);
 		l_File.renameTo(l_NewFile);
+	}
+
+	public static boolean copyFile(String a_FilePath, ProgressBar a_ProgressBar) {
+		File l_File = new File(a_FilePath);
+		if (l_File.getParent().equals(m_sCurrentPath))
+			return false;
+		String l_FileName = l_File.getName();
+		
+		File l_File2 = new File(m_sCurrentPath +"/"+ l_FileName);
+		long l_FileLen = l_File.length();
+		
+		try {
+			FileInputStream fis = new FileInputStream(l_File);
+			FileOutputStream fos = new FileOutputStream(l_File2);
+			
+			byte l_Buffer[] = new byte[1024*1024];
+			
+			l_FileLen = l_FileLen/1024;
+			int max = (int) (l_FileLen/1024);
+			
+			a_ProgressBar.setMax(max);
+			
+			int len = 0;
+			int count = 0;
+			
+			while (len != -1) {
+				count++;
+				len = fis.read(l_Buffer);
+				fos.write(l_Buffer);
+				a_ProgressBar.setProgress(count);
+			}
+			fis.close();
+			fos.close();
+			
+		} catch (IOException e) {
+			return false;
+		}
+		return true;
 	}
 }

@@ -4,6 +4,7 @@ import java.util.List;
 
 import android.os.Bundle;
 import android.app.Activity;
+import android.app.Dialog;
 import android.util.DisplayMetrics;
 import android.view.KeyEvent;
 import android.view.Menu;
@@ -15,9 +16,15 @@ import android.widget.CheckBox;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.AdapterView.OnItemLongClickListener;
 import android.widget.ListView;
+import android.widget.ProgressBar;
+import android.widget.TextView;
 import android.widget.Toast;
 
 public class MainActivity extends Activity {
+	enum EditMode {
+		Copy, Move, Rename, None
+	};
+
 	MyAdapter m_Adapter;
 	ListView m_ListView;
 
@@ -28,9 +35,10 @@ public class MainActivity extends Activity {
 	MenuItem m_CancelItem;
 	MenuItem m_OkItem;
 	MenuItem m_MoveItem;
-
+	MenuItem m_CopyItem;
 	List<String> m_RenameList;
 
+	EditMode m_EditFlag;
 	public static int m_xd, m_yd;
 
 	@Override
@@ -58,6 +66,8 @@ public class MainActivity extends Activity {
 
 		m_xd = (int) (l_Metrics.widthPixels / l_Metrics.xdpi);
 		m_yd = (int) (l_Metrics.heightPixels / l_Metrics.ydpi);
+
+		m_EditFlag = EditMode.None;
 
 	}
 
@@ -94,10 +104,11 @@ public class MainActivity extends Activity {
 		return super.onKeyDown(keyCode, event);
 	}
 
-	public void updateActionBar(int a_back, int a_remove, int a_move,
-			int a_cancel, int a_ok) {
+	public void updateActionBar(int a_back, int a_remove, int a_copy,
+			int a_move, int a_cancel, int a_ok) {
 		m_BackItem.setShowAsAction(a_back);
 		m_RemoveItem.setShowAsAction(a_remove);
+		m_CopyItem.setShowAsAction(a_copy);
 		m_MoveItem.setShowAsAction(a_move);
 		m_CancelItem.setShowAsAction(a_cancel);
 		m_OkItem.setShowAsAction(a_ok);
@@ -106,19 +117,22 @@ public class MainActivity extends Activity {
 	public void displayBackAction() {
 		updateActionBar(MenuItem.SHOW_AS_ACTION_ALWAYS,
 				MenuItem.SHOW_AS_ACTION_NEVER, MenuItem.SHOW_AS_ACTION_NEVER,
-				MenuItem.SHOW_AS_ACTION_NEVER, MenuItem.SHOW_AS_ACTION_NEVER);
+				MenuItem.SHOW_AS_ACTION_NEVER, MenuItem.SHOW_AS_ACTION_NEVER,
+				MenuItem.SHOW_AS_ACTION_NEVER);
 	}
 
 	public void displayEditActions() {
 		updateActionBar(MenuItem.SHOW_AS_ACTION_NEVER,
 				MenuItem.SHOW_AS_ACTION_ALWAYS, MenuItem.SHOW_AS_ACTION_ALWAYS,
-				MenuItem.SHOW_AS_ACTION_NEVER, MenuItem.SHOW_AS_ACTION_NEVER);
+				MenuItem.SHOW_AS_ACTION_ALWAYS, MenuItem.SHOW_AS_ACTION_NEVER,
+				MenuItem.SHOW_AS_ACTION_NEVER);
 	}
 
 	public void displayJudgeActions() {
 		updateActionBar(MenuItem.SHOW_AS_ACTION_ALWAYS,
 				MenuItem.SHOW_AS_ACTION_NEVER, MenuItem.SHOW_AS_ACTION_NEVER,
-				MenuItem.SHOW_AS_ACTION_ALWAYS, MenuItem.SHOW_AS_ACTION_ALWAYS);
+				MenuItem.SHOW_AS_ACTION_NEVER, MenuItem.SHOW_AS_ACTION_ALWAYS,
+				MenuItem.SHOW_AS_ACTION_ALWAYS);
 	}
 
 	@Override
@@ -129,10 +143,9 @@ public class MainActivity extends Activity {
 		m_OptionMenu = a_Menu;
 
 		m_BackItem = a_Menu.findItem(R.id.action_back);
-
 		m_RemoveItem = a_Menu.findItem(R.id.action_removefile);
 		m_MoveItem = a_Menu.findItem(R.id.action_move);
-
+		m_CopyItem = a_Menu.findItem(R.id.action_copy);
 		m_OkItem = a_Menu.findItem(R.id.action_ok);
 		m_CancelItem = a_Menu.findItem(R.id.action_cancel);
 
@@ -169,8 +182,16 @@ public class MainActivity extends Activity {
 
 			break;
 
+		case R.id.action_copy:
+
 		case R.id.action_move:
+			if (a_Item.getItemId() == R.id.action_copy)
+				m_EditFlag = EditMode.Copy;
+			else
+				m_EditFlag = EditMode.Move;
+
 			displayJudgeActions();
+			
 			m_RenameList = m_Adapter.getCheckedList();
 			m_Adapter.setListMode(MyAdapter.ListMode_Default);
 			m_Adapter.notifyDataSetChanged();
@@ -178,17 +199,50 @@ public class MainActivity extends Activity {
 
 		case R.id.action_ok:
 			if (FileUtil.getCurPath().startsWith(MToolBox.getSdcardPath())) {
-				for (int i = 0; i < m_RenameList.size(); i++) {
+				Dialog dialog = new Dialog(this);
+				dialog.setContentView(R.layout.progress_dialog);
+
+				TextView l_ProgressJobName = (TextView) dialog
+						.findViewById(R.id.tv_PrgressJob);
+				ProgressBar l_ProgressBar = (ProgressBar) dialog
+						.findViewById(R.id.pb_FileEdit);
+				ProgressBar l_ProgressBar1 = (ProgressBar) dialog
+						.findViewById(R.id.pb_LargeFile);
+
+				if (m_EditFlag == EditMode.Copy) {
+					l_ProgressBar1.setVisibility(View.VISIBLE);
+					l_ProgressBar1.setProgress(0);
+					dialog.setTitle("Copy File");
+				} else {
+					l_ProgressBar1.setVisibility(View.GONE);
+					dialog.setTitle("Move File");
+				}
+				dialog.show();
+				int l_Size = m_RenameList.size();
+				l_ProgressBar.setMax(l_Size);
+				l_ProgressBar.setProgress(0);
+
+				for (int i = 0; i < l_Size; i++) {
+
 					String l_FilePath = m_RenameList.get(i);
 					String l_FileName = FileUtil.getFileName(l_FilePath);
-					FileUtil.renameFile(l_FilePath, FileUtil.getCurPath() + "/"
-							+ l_FileName);
+					l_ProgressJobName.setText(l_FileName);
 
+					if (m_EditFlag == EditMode.Copy) {
+						FileUtil.copyFile(m_RenameList.get(i), l_ProgressBar1);
+					} else {
+						FileUtil.renameFile(l_FilePath, FileUtil.getCurPath()
+								+ "/" + l_FileName);
+					}
+					l_ProgressBar.setProgress(i);
 				}
+				dialog.dismiss();
 			} else {
 				Toast.makeText(this, "Can't operate file here",
 						Toast.LENGTH_LONG).show();
 			}
+
+			m_EditFlag = EditMode.None;
 		case R.id.action_cancel:
 			displayBackAction();
 			m_Adapter.setFileNames(FileUtil.getCurDirFileNames());

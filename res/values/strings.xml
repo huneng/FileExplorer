@@ -8,6 +8,7 @@
     <string name="front_dir">Forward</string>
     <string name="action_back">Back</string>
     <string name="action_move">Move</string>
+    <string name="action_copy">Copy</string>
     <string name="trash">Trash</string>
     <string name="cancel">Cancel</string>
     
